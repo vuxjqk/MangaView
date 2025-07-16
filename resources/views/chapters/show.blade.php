@@ -166,6 +166,27 @@
         .right-arrow {
             right: 20px;
         }
+
+        .offcanvas {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 400px;
+            max-width: 90%;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            z-index: 2000;
+            transition: right 0.3s ease-in-out;
+        }
+
+        .offcanvas.open {
+            right: 0;
+        }
+
+        .offcanvas-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
     </style>
 </head>
 
@@ -188,14 +209,33 @@
                         </div>
                     </div>
 
-                    <!-- Premium Badge -->
-                    @if ($chapter->is_premium)
-                        <div
-                            class="flex items-center bg-yellow-500 text-black px-3 py-1 rounded-full text-sm font-semibold">
-                            <i class="fas fa-crown mr-1"></i>
-                            Premium
-                        </div>
-                    @endif
+                    <div class="flex items-center space-x-4">
+                        <a href="{{ route('chapters.edit', $chapter) }}"
+                            class="text-white hover:text-blue-400 transition duration-200">
+                            <i class="fas fa-edit mr-2"></i>
+                            Chỉnh sửa
+                        </a>
+                        <form action="{{ route('chapters.destroy', $chapter) }}" method="POST"
+                            onsubmit="return confirm('Bạn có chắc chắn muốn xóa chương này không?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="text-white hover:text-blue-400 transition duration-200">
+                                <i class="fas fa-trash mr-2"></i>
+                                Xoá
+                            </button>
+                        </form>
+                        <button id="toggleComments" class="text-white hover:text-blue-400 transition duration-200">
+                            <i class="fas fa-comments mr-2"></i>
+                            Bình luận
+                        </button>
+                        @if ($chapter->is_premium)
+                            <div
+                                class="flex items-center bg-yellow-500 text-black px-3 py-1 rounded-full text-sm font-semibold">
+                                <i class="fas fa-crown mr-1"></i>
+                                Premium
+                            </div>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
@@ -304,6 +344,59 @@
             </div>
         </div>
 
+        <!-- Comments Offcanvas -->
+        <div id="comments-offcanvas" class="offcanvas">
+            <div class="offcanvas-header px-6 py-4">
+                <h3 class="text-lg font-semibold text-white flex items-center">
+                    <i class="fas fa-comments mr-2"></i>
+                    Bình luận (<span id="comment-count">0</span>)
+                </h3>
+                <button id="close-comments" class="text-white hover:text-gray-300">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="bg-gray-900 p-6 h-full overflow-y-auto">
+                <!-- Comment Form -->
+                <div class="mb-6">
+                    <div class="bg-gray-800 rounded-lg p-4">
+                        <textarea id="comment-input" placeholder="Viết bình luận của bạn..."
+                            class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white transition duration-200 resize-none"
+                            rows="3"></textarea>
+                        <div class="flex items-center justify-between mt-3">
+                            <div class="flex items-center space-x-2">
+                                <button class="text-gray-400 hover:text-gray-200 transition duration-200">
+                                    <i class="fas fa-smile"></i>
+                                </button>
+                                <button class="text-gray-400 hover:text-gray-200 transition duration-200">
+                                    <i class="fas fa-image"></i>
+                                </button>
+                            </div>
+                            <button id="submit-comment"
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center"
+                                data-chapter-id="{{ $chapter->id }}">
+                                <i class="fas fa-paper-plane mr-2"></i>
+                                Gửi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comments List -->
+                <div id="comments-list" class="space-y-4">
+                    <!-- Comments will be dynamically loaded here -->
+                </div>
+
+                <!-- Load More Comments -->
+                <div class="text-center mt-6">
+                    <button id="load-more-comments"
+                        class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-lg transition duration-200 flex items-center mx-auto">
+                        <i class="fas fa-chevron-down mr-2"></i>
+                        Xem thêm bình luận
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Chapter Navigation -->
         <div class="bg-gray-800 p-6 mt-8">
             <div class="container mx-auto">
@@ -359,11 +452,32 @@
             const totalPagesSpan = document.getElementById('totalPages');
             const prevPageBtn = document.getElementById('prevPage');
             const nextPageBtn = document.getElementById('nextPage');
+            const toggleCommentsBtn = document.getElementById('toggleComments');
+            const commentsOffcanvas = document.getElementById('comments-offcanvas');
+            const closeCommentsBtn = document.getElementById('close-comments');
+            const commentInput = document.getElementById('comment-input');
+            const submitCommentBtn = document.getElementById('submit-comment');
+            const commentsList = document.getElementById('comments-list');
+            const loadMoreBtn = document.getElementById('load-more-comments');
+            const commentCount = document.getElementById('comment-count');
 
             let currentZoom = 100;
             let currentMode = 'vertical';
             let currentPageIndex = 0;
+            let currentCommentPage = 1;
             const totalPages = {{ $chapter->chapter_images()->count() }};
+
+            // Toggle Comments Offcanvas
+            toggleCommentsBtn.addEventListener('click', function() {
+                commentsOffcanvas.classList.toggle('open');
+                if (commentsOffcanvas.classList.contains('open') && commentsList.children.length === 0) {
+                    loadComments();
+                }
+            });
+
+            closeCommentsBtn.addEventListener('click', function() {
+                commentsOffcanvas.classList.remove('open');
+            });
 
             // Mode switching
             verticalModeBtn.addEventListener('click', function() {
@@ -520,6 +634,185 @@
                         horizontalModeBtn.click();
                         break;
                 }
+            });
+
+            // Comments handling
+            async function fetchComments(chapterId, page = 1) {
+                try {
+                    const response = await fetch(`/MangaView/comments?chapter_id=${chapterId}&page=${page}`);
+                    const data = await response.json();
+                    return data;
+                } catch (error) {
+                    console.error('Error fetching comments:', error);
+                    return {
+                        comments: [],
+                        total: 0,
+                        has_more: false
+                    };
+                }
+            }
+
+            function renderComment(comment, currentUserId) {
+                const isOwner = comment.user_id === currentUserId;
+                const username = comment.user?.name || 'Ẩn danh';
+                const createdAt = new Date(comment.created_at).toLocaleString('vi-VN');
+                return `
+                    <div class="flex space-x-2 py-2 border-b border-gray-700/50" data-comment-id="${comment.id}">
+    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random"
+         alt="${username}" class="w-8 h-8 rounded-full flex-shrink-0">
+    
+    <div class="flex-1 min-w-0">
+        <div class="flex items-center space-x-2 mb-1">
+            <h4 class="font-medium text-white text-sm truncate">${username}</h4>
+            <span class="text-xs text-gray-500 flex-shrink-0">${createdAt}</span>
+            ${isOwner ? `
+                                        <div class="flex items-center space-x-1 ml-auto">
+                                            <button class="text-gray-500 hover:text-indigo-400 transition-colors text-xs edit-comment" 
+                                                    data-comment-id="${comment.id}" title="Sửa">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="text-gray-500 hover:text-red-400 transition-colors text-xs delete-comment" 
+                                                    data-comment-id="${comment.id}" title="Xóa">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    ` : ''}
+        </div>
+        <p class="text-gray-300 text-sm leading-relaxed comment-content">${comment.content}</p>
+    </div>
+</div>
+                `;
+            }
+
+            async function loadComments() {
+                const chapterId = submitCommentBtn.dataset.chapterId;
+                const data = await fetchComments(chapterId, currentCommentPage);
+                commentCount.textContent = data.total || 0;
+                data.comments.forEach(comment => {
+                    commentsList.insertAdjacentHTML('beforeend', renderComment(comment,
+                        {{ Auth::id() ?? 0 }}));
+                });
+                if (!data.has_more) {
+                    loadMoreBtn.style.display = 'none';
+                }
+            }
+
+            submitCommentBtn.addEventListener('click', async () => {
+                const content = commentInput.value.trim();
+                if (!content) {
+                    alert('Vui lòng nhập nội dung bình luận.');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('{{ route('comments.store') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        },
+                        body: JSON.stringify({
+                            chapter_id: submitCommentBtn.dataset.chapterId,
+                            content: content,
+                        }),
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        commentInput.value = '';
+                        commentsList.insertAdjacentHTML('afterbegin', renderComment(result.comment,
+                            {{ Auth::id() ?? 0 }}));
+                        commentCount.textContent = parseInt(commentCount.textContent) + 1;
+                    } else {
+                        alert(result.message);
+                    }
+                } catch (error) {
+                    alert('Không thể gửi bình luận: ' + error.message);
+                }
+            });
+
+            commentsList.addEventListener('click', async (e) => {
+                const commentId = e.target.closest('.edit-comment, .delete-comment')?.dataset.commentId;
+                if (!commentId) return;
+
+                if (e.target.closest('.edit-comment')) {
+                    const commentDiv = e.target.closest('[data-comment-id]');
+                    const contentP = commentDiv.querySelector('.comment-content');
+                    const currentContent = contentP.textContent;
+                    const textarea = document.createElement('textarea');
+                    textarea.value = currentContent;
+                    textarea.className =
+                        'w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white';
+                    contentP.replaceWith(textarea);
+
+                    const saveBtn = document.createElement('button');
+                    saveBtn.textContent = 'Lưu';
+                    saveBtn.className =
+                        'bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg mt-2';
+                    commentDiv.querySelector('.bg-gray-800').appendChild(saveBtn);
+
+                    saveBtn.addEventListener('click', async () => {
+                        const newContent = textarea.value.trim();
+                        if (!newContent) {
+                            alert('Vui lòng nhập nội dung bình luận.');
+                            return;
+                        }
+
+                        try {
+                            const response = await fetch(
+                                '{{ route('comments.update', ['comment' => ':commentId']) }}'
+                                .replace(':commentId', commentId), {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    },
+                                    body: JSON.stringify({
+                                        content: newContent
+                                    }),
+                                });
+
+                            const result = await response.json();
+                            if (result.success) {
+                                textarea.replaceWith(contentP);
+                                contentP.textContent = result.comment.content;
+                                saveBtn.remove();
+                            } else {
+                                alert(result.message);
+                            }
+                        } catch (error) {
+                            alert('Không thể cập nhật bình luận: ' + error.message);
+                        }
+                    });
+                } else if (e.target.closest('.delete-comment')) {
+                    if (!confirm('Bạn có chắc chắn muốn xóa bình luận này không?')) return;
+
+                    try {
+                        const response = await fetch(
+                            '{{ route('comments.destroy', ['comment' => ':commentId']) }}'.replace(
+                                ':commentId', commentId), {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                },
+                            });
+
+                        const result = await response.json();
+                        if (result.success) {
+                            e.target.closest('[data-comment-id]').remove();
+                            commentCount.textContent = parseInt(commentCount.textContent) - 1;
+                        } else {
+                            alert(result.message);
+                        }
+                    } catch (error) {
+                        alert('Không thể xóa bình luận: ' + error.message);
+                    }
+                }
+            });
+
+            loadMoreBtn.addEventListener('click', () => {
+                currentCommentPage++;
+                loadComments();
             });
 
             // Initialize

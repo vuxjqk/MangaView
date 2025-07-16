@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Genre;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ComicController extends Controller
 {
@@ -79,7 +80,8 @@ class ComicController extends Controller
      */
     public function edit(Comic $comic)
     {
-        //
+        $genres = Genre::all();
+        return view('comics.edit', compact('genres', 'comic'));
     }
 
     /**
@@ -94,16 +96,35 @@ class ComicController extends Controller
             'status' => 'in:ongoing,completed',
             'cover_image' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
             'language' => 'in:vi,en',
-            'is_approved' => 'boolean'
+            'genres' => 'array',
+            'genres.*' => 'exists:genres,id',
         ]);
 
-        // Xử lý ảnh nếu có upload mới
+        // Xử lý upload ảnh nếu có
         if ($request->hasFile('cover_image')) {
+            // Xóa ảnh bìa cũ nếu tồn tại
+            if ($comic->cover_image) {
+                Storage::disk('public')->delete($comic->cover_image);
+            }
             $path = $request->file('cover_image')->store('covers', 'public');
             $validated['cover_image'] = $path;
+        } else {
+            // Giữ nguyên ảnh bìa cũ nếu không có ảnh mới
+            $validated['cover_image'] = $comic->cover_image;
         }
 
+        $validated['updated_by'] = Auth::id();
+
+        // Cập nhật bản ghi Comic
         $comic->update($validated);
+
+        // Đồng bộ genres nếu có
+        if (isset($validated['genres'])) {
+            $comic->genres()->sync($validated['genres']);
+        } else {
+            // Nếu không có genres được gửi, xóa toàn bộ genres hiện tại
+            $comic->genres()->sync([]);
+        }
 
         return redirect()->route('comics.index')->with('success', 'Comic updated successfully.');
     }
@@ -114,7 +135,17 @@ class ComicController extends Controller
     public function destroy(Comic $comic)
     {
         try {
+            // Xóa ảnh bìa nếu tồn tại
+            if ($comic->cover_image) {
+                Storage::disk('public')->delete($comic->cover_image);
+            }
+
+            // Xóa các mối quan hệ genres (nếu có)
+            $comic->genres()->detach();
+
+            // Xóa bản ghi Comic
             $comic->delete();
+
             return redirect()->route('comics.index')->with('success', 'Comic deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->route('comics.index')->with('error', 'Failed to delete comic. It may have associated records.');

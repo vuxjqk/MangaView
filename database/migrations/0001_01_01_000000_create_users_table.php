@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('provider')->nullable(); // Tên nhà cung cấp (google, facebook)
             $table->string('provider_id')->nullable(); // ID từ nhà cung cấp
             $table->string('avatar')->nullable();
+            $table->string('role')->default('user');
             $table->rememberToken();
             $table->timestamps();
         });

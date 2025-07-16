@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('chapters', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('comic_id')->constrained('comics')->onDelete('cascade');
+            $table->foreignId('comic_id')->constrained('comics');
             $table->string('title');
             $table->integer('chapter_number');
             $table->integer('views')->default(0);

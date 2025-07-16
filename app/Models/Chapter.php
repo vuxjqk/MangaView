@@ -20,4 +20,9 @@ class Chapter extends Model
     {
         return $this->hasMany(ChapterImage::class)->orderBy('page_number');
     }
+
+    public function comic()
+    {
+        return $this->belongsTo(Comic::class);
+    }
 }

@@ -11,6 +11,20 @@
                 </h2>
             </div>
             <div class="flex items-center space-x-3">
+                <a href="{{ route('comics.edit', $comic) }}"
+                    class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center">
+                    <i class="fas fa-edit mr-2"></i>
+                    Chỉnh sửa
+                </a>
+                <form action="{{ route('comics.destroy', $comic) }}" method="POST" class="inline-block">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit"
+                        class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center"
+                        onclick="return confirm('Bạn có chắc chắn muốn xóa truyện tranh này?')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
                 <button
                     class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-200 flex items-center">
                     <i class="fas fa-heart mr-2"></i>
