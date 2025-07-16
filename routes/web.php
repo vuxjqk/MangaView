@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\ChapterController;
 use App\Http\Controllers\ComicController;
 use App\Http\Controllers\GenreController;
 use App\Http\Controllers\ProfileController;
@@ -21,6 +22,7 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('genres', GenreController::class);
     Route::resource('comics', ComicController::class);
+    Route::resource('chapters', ChapterController::class);
 });
 
 Route::get('/auth/redirect/{provider}', [SocialAuthController::class, 'redirect'])->name('social.redirect');

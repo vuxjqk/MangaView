@@ -23,4 +23,9 @@ class Comic extends Model
     {
         return $this->belongsToMany(Genre::class, 'comic_genres');
     }
+
+    public function chapters()
+    {
+        return $this->hasMany(Chapter::class)->orderBy('created_at', 'desc');
+    }
 }

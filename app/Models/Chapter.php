@@ -15,4 +15,9 @@ class Chapter extends Model
         'is_approved',
         'uploaded_by',
     ];
+
+    public function chapter_images()
+    {
+        return $this->hasMany(ChapterImage::class)->orderBy('page_number');
+    }
 }

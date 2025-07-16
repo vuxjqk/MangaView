@@ -115,23 +115,21 @@
                                                 ['bg-teal-100', 'text-teal-800'],
                                             ];
                                         @endphp
-                                        @foreach ($comic->genres as $item)
-                                            @php
-                                                $color = $colorClasses[$loop->index % count($colorClasses)];
-                                            @endphp
-                                            <span
-                                                class="{{ $color[0] }} {{ $color[1] }} px-3 py-1 rounded-full text-sm">
-                                                {{ $item->name }}
+                                        @if ($comic->genres->count() > 0)
+                                            @foreach ($comic->genres as $item)
+                                                @php
+                                                    $color = $colorClasses[$loop->index % count($colorClasses)];
+                                                @endphp
+                                                <span
+                                                    class="{{ $color[0] }} {{ $color[1] }} px-3 py-1 rounded-full text-sm">
+                                                    {{ $item->name }}
+                                                </span>
+                                            @endforeach
+                                        @else
+                                            <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">
+                                                ---
                                             </span>
-                                        @endforeach
-                                        <span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm">Hành
-                                            động</span>
-                                        <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Phiêu
-                                            lưu</span>
-                                        <span
-                                            class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full text-sm">Shounen</span>
-                                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Siêu
-                                            nhiên</span>
+                                        @endif
                                     </div>
                                 </div>
 
@@ -174,11 +172,13 @@
 
             <!-- Chapters Section -->
             <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-6">
-                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex justify-between">
                     <h3 class="text-lg font-semibold text-white flex items-center">
                         <i class="fas fa-list mr-2"></i>
                         Danh sách chương (24 chương)
                     </h3>
+                    <a class="font-semibold text-white"
+                        href="{{ route('chapters.create') }}?comic_id={{ $comic->id }}">Thêm chương</a>
                 </div>
                 <div class="p-6">
                     <div class="flex items-center justify-between mb-4">
@@ -201,30 +201,30 @@
 
                     <!-- Chapters List -->
                     <div class="space-y-2">
-                        @for ($i = 24; $i >= 1; $i--)
+                        @foreach ($comic->chapters as $item)
                             <div
                                 class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200">
                                 <div class="flex items-center space-x-3">
                                     <span
-                                        class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-semibold">{{ $i }}</span>
+                                        class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-semibold">{{ $item->chapter_number }}</span>
                                     <div>
                                         <h4 class="font-medium text-gray-800 hover:text-indigo-600 cursor-pointer">
-                                            Chương {{ $i }}:
-                                            {{ $i == 24 ? 'Trận chiến cuối cùng' : ($i == 23 ? 'Sức mạnh thực sự' : 'Tiêu đề chương ' . $i) }}
+                                            Chương {{ $item->chapter_number }}:{{ $item->title }}
                                         </h4>
-                                        <p class="text-sm text-gray-500">{{ rand(1, 7) }} ngày trước</p>
+                                        <p class="text-sm text-gray-500">{{ $item->created_at->diffForHumans() }}</p>
                                     </div>
                                 </div>
                                 <div class="flex items-center space-x-2">
-                                    @if ($i == 24)
+                                    @if ($item->created_at->diffInHours(now()) < 24)
                                         <span class="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs">Mới</span>
                                     @endif
-                                    <button class="text-gray-400 hover:text-gray-600 transition duration-200">
+                                    <a href="{{ route('chapters.show', $item) }}"
+                                        class="text-gray-400 hover:text-gray-600 transition duration-200">
                                         <i class="fas fa-chevron-right"></i>
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
-                        @endfor
+                        @endforeach
                     </div>
 
                     <!-- Load More -->
