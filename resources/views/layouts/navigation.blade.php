@@ -19,6 +19,10 @@
                     <x-nav-link :href="route('genres.index')" :active="request()->routeIs('genres.*')">
                         {{ __('Genre') }}
                     </x-nav-link>
+
+                    <x-nav-link :href="route('comics.index')" :active="request()->routeIs('comics.*')">
+                        {{ __('Comic') }}
+                    </x-nav-link>
                 </div>
             </div>
 

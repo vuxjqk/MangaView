@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\ComicController;
 use App\Http\Controllers\GenreController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::resource('genres', GenreController::class);
+    Route::resource('comics', ComicController::class);
 });
 
 Route::get('/auth/redirect/{provider}', [SocialAuthController::class, 'redirect'])->name('social.redirect');
